@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Data Guru SMA DAYEUHKOLOT</title>
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.25/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" type="text/css" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+</head>
+<body>
+  <button id="tambahBtn">Tambah Guru</button>
+
+  <table id="guruTable">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Nama</th>
+        <th>Usia</th>
+        <th>Alamat</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div id="formContainer" style="display: none;">
+    <h3>Tambah Guru</h3>
+    <form id="guruForm">
+      <input type="hidden" id="guruId" name="id">
+      <label for="nama">Nama:</label>
+      <input type="text" id="nama" name="nama" required>
+      <label for="usia">Usia:</label>
+      <input type="number" id="usia" name="usia" required>
+      <label for="alamat">Alamat:</label>
+      <input type="text" id="alamat" name="alamat" required>
+      <button type="submit">Simpan</button>
+      <button type="button" id="cancelBtn">Batal</button>
+    </form>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js"></script>
+  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+  <script>
+    $(document).ready(function() {
+      var dataTable = $('#guruTable').DataTable({
+        columns: [
+          { data: 'id' },
+          { data: 'nama' },
+          { data: 'usia' },
+          { data: 'alamat' },
+          {
+            data: null,
+            render: function(data, type, row) {
+              return '<button class="editBtn" data-id="' + data.id + '">Edit</button>' +
+                     '<button class="deleteBtn" data-id="' + data.id + '">Hapus</button>';
+            }
+          }
+        ]
+      });
+
+      function loadGuruData() {
+        $.ajax({
+          url: 'http://localhost:3000/guru',
+          method: 'GET',
+          dataType: 'json',
+          success: function(response) {
+            dataTable.clear().rows.add(response).draw();
+          }
+        });
+      }
+
+      loadGuruData();
+
+      $('#tambahBtn').button().click(function() {
+        $('#guruForm')[0].reset();
+        $('#guruId').val('');
+        $('#formContainer').show();
+      });
+
+      $('#guruForm').submit(function(e) {
+        e.preventDefault();
+        var guruId = $('#guruId').val();
+        var guruData = {
+          nama: $('#nama').val(),
+          usia: $('#usia').val(),
+          alamat: $('#alamat').val()
+        };
+
+        var apiUrl = guruId ? 'http://localhost:3000/guru/' + guruId : 'http://localhost:3000/guru';
+
+        $.ajax({
+          url: apiUrl,
+          method: guruId ? 'PUT' : 'POST',
+          dataType: 'json',
+          contentType: 'application/json',
+          data: JSON.stringify(guruData),
+          success: function(response) {
+            if (guruId) {
+              var index = dataTable.row($('button.editBtn[data-id="' + guruId + '"]').parents('tr')).index();
+              dataTable.row(index).data(response).draw();
+            } else {
+              dataTable.row.add(response).draw();
+            }
+            $('#formContainer').hide();
+          }
+        });
+      });
+
+      $(document).on('click', '.editBtn', function() {
+        var guruId = $(this).data('id');
+        var apiUrl = 'http://localhost:3000/guru/' + guruId;
+
+        $.ajax({
+          url: apiUrl,
+          method: 'GET',
+          dataType: 'json',
+          success: function(response) {
+            $('#guruId').val(response.id);
+            $('#nama').val(response.nama);
+            $('#usia').val(response.usia);
+            $('#alamat').val(response.alamat);
+            $('#formContainer').show();
+          }
+        });
+      });
+
+      $(document).on('click', '.deleteBtn', function() {
+        var guruId = $(this).data('id');
+        var apiUrl = 'http://localhost:3000/guru/' + guruId;
+
+        if (confirm('Apakah Anda yakin ingin menghapus guru ini?')) {
+          $.ajax({
+            url: apiUrl,
+            method: 'DELETE',
+            success: function(response) {
+              var index = dataTable.row($('button.deleteBtn[data-id="' + guruId + '"]').parents('tr')).index();
+              dataTable.row(index).remove().draw();
+            }
+          });
+        }
+      });
+
+      $('#cancelBtn').button().click(function() {
+        $('#guruForm')[0].reset();
+        $('#guruId').val('');
+        $('#formContainer').hide();
+      });
+    });
+  </script>
+</body>
+</html>
